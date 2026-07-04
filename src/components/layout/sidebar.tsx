@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Compass, FileText, CheckCircle, LayoutTemplate, Activity, Bug } from "lucide-react";
+import { Compass, FileText, CheckCircle, LayoutTemplate, Activity, Bug, Trophy } from "lucide-react";
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Compass },
@@ -8,6 +8,7 @@ const navigation = [
   { name: 'Debugger', href: '/debugger', icon: Bug },
   { name: 'Audit Trail', href: '/audit', icon: Activity },
   { name: 'Docs', href: '/docs', icon: FileText },
+  { name: 'Why LaunchPad?', href: '/why-launchpad', icon: Trophy },
 ];
 
 export function Sidebar() {
@@ -25,9 +26,13 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground"
+                className={`group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  item.name === 'Why LaunchPad?' 
+                    ? 'text-yellow-500 hover:bg-yellow-500/10' 
+                    : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'
+                }`}
               >
-                <Icon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                <Icon className={`mr-3 h-5 w-5 flex-shrink-0 ${item.name === 'Why LaunchPad?' ? 'text-yellow-500' : ''}`} aria-hidden="true" />
                 {item.name}
               </Link>
             )

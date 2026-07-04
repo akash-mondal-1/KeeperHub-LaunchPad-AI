@@ -9,7 +9,7 @@ import { sepolia } from "viem/chains";
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string }) => Promise<string[]>;
+      request: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
       isMetaMask?: boolean;
     };
   }
