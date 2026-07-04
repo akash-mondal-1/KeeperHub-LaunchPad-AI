@@ -86,6 +86,22 @@ export default function DocsPage() {
                     </AccordionContent>
                   </AccordionItem>
 
+                  <AccordionItem value="item-5" className="border-border/50 border-b-0">
+                    <AccordionTrigger className="hover:text-primary transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs">5</div>
+                        Understand the Architecture
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground pl-10 leading-relaxed space-y-4">
+                      <p>KeeperHub LaunchPad uses a Relayer pattern. The frontend generates a payload, MetaMask signs it, and our Next.js API (Acting as the KeeperHub MCP) routes it for MEV protection and broadcasts it.</p>
+                      
+                      <div className="p-4 bg-black/40 rounded-lg border border-border/50 font-mono text-xs overflow-x-auto text-blue-400">
+                        Browser ➔ Sign Payload ➔ KeeperHub MCP (API) ➔ KeeperHub Execution ➔ Sepolia ➔ Audit Trail
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
                 </Accordion>
               </CardContent>
             </Card>

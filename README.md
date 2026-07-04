@@ -14,6 +14,28 @@ Built for the **KeeperHub Agents Onchain Hackathon** with a special focus on win
 *   **AI Error Explainer**: Paste cryptic RPC errors and get human-readable explanations with one-click fixes.
 *   **Interactive Tutorial**: Embedded documentation that guides you through the entire lifecycle of a KeeperHub transaction.
 
+## 🏗 Architecture
+
+The LaunchPad utilizes a robust relayer pattern to ensure transactions are safely routed through the KeeperHub Execution Layer.
+
+```mermaid
+graph TD
+    A[Browser / LaunchPad] -->|Sign Transaction| B[KeeperHub MCP]
+    B -->|Relayer Payload| C[KeeperHub Execution Engine]
+    C -->|Gas Estimation & MEV Protection| D[Ethereum Sepolia]
+    D -->|Transaction Mined| E[KeeperHub Audit Trail]
+    E -->|JSON-RPC Output| A
+```
+
+## 🎥 Demos
+
+*(Replace these placeholders with real GIFs for the final submission!)*
+
+*   **1. Setup & Environment Doctor**: `![Setup GIF](./docs/gifs/setup.gif)`
+*   **2. Template Generation**: `![Template GIF](./docs/gifs/template.gif)`
+*   **3. First Transaction (KeeperHub MCP)**: `![Workflow GIF](./docs/gifs/workflow.gif)`
+*   **4. AI Error Explainer**: `![Debugger GIF](./docs/gifs/debugger.gif)`
+
 ## 🚀 Quick Start
 
 ```bash
