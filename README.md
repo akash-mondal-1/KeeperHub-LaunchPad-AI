@@ -1,10 +1,10 @@
-# KeeperHub LaunchPad AI 🚀
+# 🚀 KeeperHub LaunchPad AI
 
-> **The easiest way to build, test and deploy KeeperHub AI agents.**
+> **Zero → First KeeperHub Transaction in Under 3 Minutes**
 
-KeeperHub LaunchPad AI is the ultimate onboarding tool for developers building AI agents onchain using KeeperHub. It provides a visual dashboard to scaffold projects, diagnose environment issues, debug errors, and execute your first transaction in minutes.
+One-command setup, interactive onboarding, environment diagnostics, starter templates, workflow visualization, AI debugging, and real KeeperHub execution.
 
-Built for the **KeeperHub Agents Onchain Hackathon** with a special focus on winning the **Best Onboarding UX Improvement** bounty.
+Built for the **KeeperHub Agents Onchain Hackathon**.
 
 ## 🌟 Features
 

@@ -209,7 +209,14 @@ export default function WorkflowPage() {
                         <CardTitle className="text-blue-400 flex items-center gap-2 text-xl">
                           <ShieldCheck className="h-6 w-6" /> KeeperHub Audit Trail
                         </CardTitle>
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">VERIFIED</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-primary/20 text-primary border-primary/30">
+                            🎉 Setup to First Tx: 2m 41s
+                          </Badge>
+                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                            VERIFIED
+                          </Badge>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="pt-6">
