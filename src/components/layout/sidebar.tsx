@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Compass, FileText, CheckCircle, LayoutTemplate, Activity, Bug, Trophy } from "lucide-react";
+import { Compass, FileText, CheckCircle, LayoutTemplate, Activity, Bug, Trophy, Search } from "lucide-react";
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Compass },
+  { name: 'Workflow Browser', href: '/browser', icon: Search },
   { name: 'Templates', href: '/templates', icon: LayoutTemplate },
   { name: 'Workflow', href: '/workflow', icon: Activity },
   { name: 'Debugger', href: '/debugger', icon: Bug },

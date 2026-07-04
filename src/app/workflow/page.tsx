@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, Play, Activity, Terminal, ExternalLink, Loader2, ShieldCheck, Clock, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { createWalletClient, custom, parseEther, createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
+import { ApiWizard } from "@/components/dashboard/api-wizard";
+import { ErrorInspector } from "@/components/dashboard/error-inspector";
+
 
 
 interface AuditData {
@@ -21,12 +22,12 @@ interface AuditData {
 }
 
 const workflowSteps = [
-  { id: 1, title: "Initialize AI Agent", desc: "Start LangChain/OpenClaw Agent" },
-  { id: 2, title: "Agent Decision", desc: "Agent decides to execute onchain" },
-  { id: 3, title: "KeeperHub API (Prepare)", desc: "Relayer simulates intent" },
-  { id: 4, title: "Client Signature", desc: "MetaMask signs payload" },
-  { id: 5, title: "KeeperHub API (Execute)", desc: "Relayer routes & broadcasts" },
-  { id: 6, title: "Audit Trail Generated", desc: "Transaction confirmed & logged" }
+  { id: 1, title: "Intent Formulated", desc: "Agent prepares transaction intent" },
+  { id: 2, title: "KeeperHub API Invoked", desc: "POST /api/workflows/{id}/execute" },
+  { id: 3, title: "Workflow Triggered", desc: "KeeperHub initializes execution run" },
+  { id: 4, title: "Turnkey MPC Execution", desc: "Secure hardware enclave signs tx" },
+  { id: 5, title: "Onchain Confirmation", desc: "Transaction confirmed onchain" },
+  { id: 6, title: "Audit Trail Fetched", desc: "Execution logs retrieved from MCP" }
 ];
 
 export default function WorkflowPage() {
@@ -34,6 +35,7 @@ export default function WorkflowPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [auditData, setAuditData] = useState<AuditData | null>(null);
+  const [keeperhubError, setKeeperhubError] = useState<any>(null);
 
   const addLog = (msg: string, isError = false, isSuccess = false) => {
     const time = new Date().toLocaleTimeString();
@@ -46,78 +48,107 @@ export default function WorkflowPage() {
   const startSimulation = async () => {
     if (isRunning) return;
     
-    if (typeof window === "undefined" || !window.ethereum) {
-      alert("Please install MetaMask to execute real transactions.");
-      return;
-    }
-
     setIsRunning(true);
-    setActiveStep(1);
     setLogs([]);
     setAuditData(null);
+    setKeeperhubError(null);
+    setActiveStep(0);
+    
+    // Get the API key from local storage
+    const apiKey = localStorage.getItem("kh_api_key");
     
     addLog("[Agent] Initializing LangChain agent abstraction...");
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 800));
+    addLog("[Agent] Decision: Transfer 0.0001 ETH to treasury via KeeperHub workflow.");
+    setActiveStep(1); // Intent Formulated
+    await new Promise(r => setTimeout(r, 500));
     
-    setActiveStep(2);
-    addLog("[Agent] Decision: Transfer 0.0001 ETH via KeeperHub MCP.");
-    await new Promise(r => setTimeout(r, 1000));
-
     try {
-      const walletClient = createWalletClient({
-        chain: sepolia,
-        transport: custom(window.ethereum)
-      });
+      addLog("[API] Invoking KeeperHub REST API (/api/keeperhub/execute)...");
+      setActiveStep(2); // KeeperHub API Invoked
       
-      const publicClient = createPublicClient({
-        chain: sepolia,
-        transport: http()
-      });
-
-      const [account] = await walletClient.requestAddresses();
-      
-      setActiveStep(3);
-      addLog("[API] Sending intent to KeeperHub MCP (/api/keeperhub/execute)...");
-      
-      const prepareRes = await fetch("/api/keeperhub/execute", {
+      const executeRes = await fetch("/api/keeperhub/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "prepare", account, to: account })
-      });
-      const prepareData = await prepareRes.json() as { plan: { gasLimit: string; routing: string; to: string } };
-      
-      addLog(`[KeeperHub] Simulation SUCCESS. Gas Limit: ${prepareData.plan.gasLimit}`, false, true);
-      addLog(`[KeeperHub] Routing allocated: ${prepareData.plan.routing}`);
-
-      setActiveStep(4);
-      addLog("[Client] Requesting wallet signature for transaction...");
-      
-      const hash = await walletClient.sendTransaction({
-        account,
-        to: prepareData.plan.to as `0x${string}`,
-        value: parseEther("0.0001")
+        body: JSON.stringify({ action: "execute", to: "0xTreasury", value: "0.0001", apiKey })
       });
       
-      addLog(`[Client] Signed and broadcasted. Hash: ${hash}`);
+      const executeData = await executeRes.json();
       
-      setActiveStep(5);
-      addLog("[KeeperHub] Tracking transaction via x402 mempool...");
+      if (!executeRes.ok || executeData.error) {
+        setKeeperhubError(executeData);
+        throw new Error(executeData.detail || executeData.error || "Execution failed");
+      }
       
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      addLog(`[KeeperHub] Transaction CONFIRMED in block ${receipt.blockNumber}!`, false, true);
+      const executionId = executeData.executionId;
+      addLog(`[KeeperHub] Workflow triggered successfully. Execution ID: ${executionId}`, false, true);
+      setActiveStep(3); // Workflow Triggered
+      await new Promise(r => setTimeout(r, 1000));
       
-      setActiveStep(6);
-      addLog("[API] Fetching final KeeperHub Audit Trail...");
+      addLog("[KeeperHub] Delegating signing to Turnkey hardware enclave...");
+      setActiveStep(4); // Turnkey MPC Execution
+      await new Promise(r => setTimeout(r, 1500));
       
-      const auditRes = await fetch("/api/keeperhub/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "audit", txHash: hash })
-      });
-      const auditResult = await auditRes.json() as { audit: AuditData };
+      addLog("[KeeperHub] Transaction broadcast to network. Waiting for confirmation...");
+      setActiveStep(5); // Onchain Confirmation
+      await new Promise(r => setTimeout(r, 1500));
+      
+      let auditResult;
+      let isComplete = false;
+      let attempts = 0;
+      
+      while (!isComplete && attempts < 10) {
+        const auditRes = await fetch("/api/keeperhub/execute", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "audit", executionId, apiKey })
+        });
+        auditResult = await auditRes.json();
+        
+        if (!auditRes.ok || auditResult.error) {
+          setKeeperhubError(auditResult);
+          throw new Error(auditResult.detail || auditResult.error || "Failed to fetch audit trail");
+        }
+        
+        const status = (auditResult.audit.status || "").toLowerCase();
+        if (status !== "pending") {
+          isComplete = true;
+        } else {
+          attempts++;
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+      
+      const hash = auditResult.audit.txHash;
+      const finalStatus = (auditResult.audit.status || "").toLowerCase();
+      
+      if (finalStatus === "failed") {
+        addLog(`[KeeperHub] Execution FAILED. Hash: ${hash}`, true, false);
+      } else {
+        addLog(`[KeeperHub] Transaction CONFIRMED in block! Hash: ${hash}`, false, true);
+      }
       
       setAuditData(auditResult.audit);
       setActiveStep(7);
+      
+      // Save to local storage for the Audit page only if successful
+      if (finalStatus !== "failed") {
+        try {
+          const newTx = {
+            id: `tx_${hash.slice(0, 10)}`,
+            agent: "LaunchPad Demo Agent",
+            status: "Success",
+            time: "Just now",
+            gas: auditResult.audit.estimatedGas || "21000",
+            execTime: `${auditResult.audit.executionTimeMs}ms`,
+            hash: hash
+          };
+          const existing = JSON.parse(localStorage.getItem('keeperhub_audits') || '[]');
+          localStorage.setItem('keeperhub_audits', JSON.stringify([newTx, ...existing]));
+        } catch (e) {
+          console.error("Failed to save audit to local storage", e);
+        }
+      }
       
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
@@ -134,16 +165,22 @@ export default function WorkflowPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-8 relative">
-          <div className="mx-auto max-w-5xl space-y-8 relative z-10">
+          <div className="mx-auto max-w-6xl space-y-8 relative z-10">
             
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight mb-2">KeeperHub Execution Workflow</h1>
-              <p className="text-muted-foreground">Visualize how your agent&apos;s decisions route securely through the KeeperHub MCP and Execution Layer.</p>
+            <div className="flex justify-between items-end mb-8">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">
+                  <Activity className="h-8 w-8 text-primary" /> KeeperHub Execution
+                </h1>
+                <p className="text-muted-foreground">Monitor your agent&apos;s live execution using the KeeperHub Direct Execution API.</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <ApiWizard />
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
               
-              <div className="lg:col-span-1 space-y-4">
+              <div className="lg:col-span-4 space-y-4">
                 <Card className="bg-card/50 backdrop-blur-xl border-border/50">
                   <CardHeader>
                     <CardTitle className="text-lg">Execution Pipeline</CardTitle>
@@ -189,80 +226,79 @@ export default function WorkflowPage() {
                 </Card>
               </div>
               
-              <div className="lg:col-span-2 space-y-6">
-                <Card className="bg-card/50 backdrop-blur-xl border-border/50 h-[250px] flex flex-col">
-                  <CardHeader className="pb-2 border-b border-border/50 bg-muted/20">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Terminal className="h-4 w-4" /> Relayer Logs
-                      </CardTitle>
-                      <Badge variant="outline" className="bg-background border-primary text-primary">KeeperHub MCP</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 p-4 overflow-y-auto font-mono text-xs space-y-2 bg-black/80">
+              <div className="lg:col-span-8 space-y-6">
+                <div className="bg-card/50 backdrop-blur-xl rounded-xl border border-border/50 p-6 flex flex-col h-[500px]">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                      <Terminal className="h-5 w-5 text-primary" /> Relayer Logs
+                    </h2>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">KeeperHub API</Badge>
+                  </div>
+                  
+                  <div className="flex-1 bg-black/40 rounded-lg p-4 font-mono text-sm overflow-y-auto border border-border/50 space-y-2 relative">
                     {logs.map((log, i) => (
                       <div key={i} dangerouslySetInnerHTML={{ __html: log }} />
                     ))}
-                    {isRunning && <div className="text-muted-foreground animate-pulse">_</div>}
-                  </CardContent>
-                </Card>
+                    {!isRunning && logs.length === 0 && (
+                      <div className="text-muted-foreground/50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                        Awaiting execution...
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {keeperhubError && <ErrorInspector error={keeperhubError} />}
                 
                 {activeStep > workflowSteps.length && auditData && (
-                  <Card className="bg-blue-950/20 border-blue-500/30 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <CardHeader className="border-b border-blue-500/10 pb-4">
+                  <Card className={`animate-in fade-in slide-in-from-bottom-4 duration-500 border ${auditData.status.toLowerCase() === 'failed' ? 'bg-red-950/20 border-red-500/30' : 'bg-green-950/20 border-green-500/30'}`}>
+                    <CardHeader className={`border-b pb-4 ${auditData.status.toLowerCase() === 'failed' ? 'border-red-500/20' : 'border-green-500/20'}`}>
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-blue-400 flex items-center gap-2 text-xl">
-                          <ShieldCheck className="h-6 w-6" /> KeeperHub Audit Trail
+                        <CardTitle className={`flex items-center gap-2 text-xl ${auditData.status.toLowerCase() === 'failed' ? 'text-red-400' : 'text-green-400'}`}>
+                          {auditData.status.toLowerCase() === 'failed' ? <Activity className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />} 
+                          Transaction {auditData.status.toLowerCase() === 'failed' ? 'Failed' : 'Executed'}
                         </CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-primary/20 text-primary border-primary/30">
-                            🎉 Setup to First Tx: 2m 41s
-                          </Badge>
-                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                            VERIFIED
-                          </Badge>
-                        </div>
+                        <Badge className={`${auditData.status.toLowerCase() === 'failed' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'}`}>
+                          {auditData.status.toUpperCase()}
+                        </Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="pt-6">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground flex items-center gap-1"><Zap className="h-3 w-3"/> Status</p>
-                          <p className="text-sm font-medium text-green-400">{auditData.status}</p>
+                          <p className="text-xs text-muted-foreground">Hash</p>
+                          <p className={`text-sm font-mono truncate pr-4 ${auditData.txHash === 'Pending' ? 'text-muted-foreground' : 'text-blue-400'}`}>{auditData.txHash}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3"/> Execution Time</p>
-                          <p className="text-sm font-medium text-foreground">{auditData.executionTimeMs} ms</p>
+                          <p className="text-xs text-muted-foreground">Network</p>
+                          <p className="text-sm font-medium text-foreground">Sepolia</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Est. Gas</p>
-                          <p className="text-sm font-medium text-foreground">{auditData.estimatedGas}</p>
+                          <p className="text-xs text-muted-foreground">Gas Used</p>
+                          <p className="text-sm font-medium text-foreground">{auditData.estimatedGas || '21000'}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Execution Time</p>
+                          <p className="text-sm font-medium text-foreground">{auditData.executionTimeMs}ms</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">Retries</p>
                           <p className="text-sm font-medium text-foreground">{auditData.retries}</p>
                         </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <p className={`text-sm font-medium ${auditData.status.toLowerCase() === 'failed' ? 'text-red-400' : 'text-green-400'}`}>{auditData.status}</p>
+                        </div>
                       </div>
                       
-                      <div className="space-y-4">
-                        <div className="p-3 bg-black/40 rounded-lg border border-border/50">
-                          <p className="text-xs text-muted-foreground mb-1">Transaction Hash</p>
-                          <a href={`https://sepolia.etherscan.io/tx/${auditData.txHash}`} target="_blank" rel="noreferrer" className="text-sm font-mono text-blue-400 hover:underline truncate block">
-                            {auditData.txHash} <ExternalLink className="inline h-3 w-3 ml-1" />
-                          </a>
-                        </div>
-                        
-                        <div className="p-3 bg-black/40 rounded-lg border border-border/50">
-                          <p className="text-xs text-muted-foreground mb-2">Relayer Routing Path</p>
-                          <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground overflow-x-auto pb-2">
-                            {auditData.routingPath.map((node: string, idx: number) => (
-                              <div key={idx} className="flex items-center gap-2 whitespace-nowrap">
-                                <span className="text-foreground px-2 py-1 bg-muted rounded">{node}</span>
-                                {idx < auditData.routingPath.length - 1 && <ArrowRight className="h-3 w-3" />}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      <div className="flex gap-4 pt-4 border-t border-border/50">
+                        <a href={auditData.txHash !== 'Pending' ? `https://sepolia.etherscan.io/tx/${auditData.txHash}` : '#'} target="_blank" rel="noreferrer" className={`flex-1 block ${auditData.txHash === 'Pending' ? 'pointer-events-none opacity-50' : ''}`}>
+                          <Button variant="outline" className="w-full gap-2 border-primary/50 text-primary hover:bg-primary/10">
+                            View on Etherscan <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </a>
+                        <Button variant="outline" className="flex-1 gap-2 border-primary/50 text-primary hover:bg-primary/10">
+                          View KeeperHub Audit <ShieldCheck className="h-4 w-4" />
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

@@ -36,7 +36,7 @@ export default function DocsPage() {
               </CardHeader>
               <CardContent>
                 {/* @ts-ignore */}
-                <Accordion type="single" collapsible className="w-full">
+                <Accordion className="w-full">
                   
                   <AccordionItem value="item-1" className="border-border/50">
                     <AccordionTrigger className="hover:text-primary transition-colors">
