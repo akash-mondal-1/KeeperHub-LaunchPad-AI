@@ -6,14 +6,6 @@ import { useState, useEffect } from "react";
 import { createWalletClient, custom } from "viem";
 import { sepolia } from "viem/chains";
 
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
-      isMetaMask?: boolean;
-    };
-  }
-}
 
 export function Header() {
   const [address, setAddress] = useState<string | null>(null);

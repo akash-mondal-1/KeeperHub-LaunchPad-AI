@@ -10,10 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { createWalletClient, custom, parseEther, createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 
-interface EthereumProvider {
-  request: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
-  isMetaMask?: boolean;
-}
 
 interface AuditData {
   txHash: string;
@@ -22,12 +18,6 @@ interface AuditData {
   estimatedGas: string;
   retries: number;
   routingPath: string[];
-}
-
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider;
-  }
 }
 
 const workflowSteps = [
