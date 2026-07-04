@@ -2,7 +2,7 @@ import { Header } from "@/components/layout/header"
 import { Sidebar } from "@/components/layout/sidebar"
 import { EnvironmentChecker } from "@/components/dashboard/environment-checker"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity, Shield, Zap, FileCode2, ArrowRight } from "lucide-react"
+import { Activity, Shield, Zap, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
@@ -86,7 +86,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Monitor your agent's decisions in real-time. See the exact path from AI intent to onchain confirmation.
+                   Monitor your agent&apos;s decisions in real-time. See the exact path from AI intent to onchain confirmation.
                   </p>
                 </CardContent>
               </Card>

@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { FileText, BookOpen, Search } from "lucide-react";
+import { BookOpen, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function DocsPage() {

@@ -2,9 +2,9 @@
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Terminal, AlertTriangle, Bug, Wrench, Search, ChevronRight } from "lucide-react";
+import { AlertTriangle, Bug, Wrench, Search, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function DebuggerPage() {

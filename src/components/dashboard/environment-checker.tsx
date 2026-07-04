@@ -5,8 +5,14 @@ import { CheckCircle2, XCircle, Loader2, Server, Terminal, Wallet, Shield } from
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
+interface DoctorResult {
+  node: { version: string; success: boolean };
+  npm: { version: string; success: boolean };
+  cli: { installed: boolean; version: string };
+  mcp: { reachable: boolean; status: string };
+}
+
 export function EnvironmentChecker() {
-  const [activeStep, setActiveStep] = useState(-1)
   const [statuses, setStatuses] = useState<Record<string, "pending" | "running" | "success" | "error">>({})
   const [messages, setMessages] = useState<Record<string, string>>({})
   const [isChecking, setIsChecking] = useState(false)
@@ -24,40 +30,29 @@ export function EnvironmentChecker() {
     setStatuses({})
     setMessages({})
     
-    // Check Node/NPM/CLI/MCP via API
     setStatuses({ node: "running", npm: "running", cli: "running", mcp: "running", wallet: "running" })
     
     try {
-      const res = await fetch('/api/doctor')
-      const data = await res.json()
+      const res = await fetch("/api/doctor")
+      const data: DoctorResult = await res.json()
       
-      // Node Check
-      setActiveStep(0)
       await new Promise(r => setTimeout(r, 600))
       setStatuses(prev => ({ ...prev, node: data.node?.success ? "success" : "error" }))
       setMessages(prev => ({ ...prev, node: data.node?.version || "Not Found" }))
 
-      // NPM Check
-      setActiveStep(1)
       await new Promise(r => setTimeout(r, 600))
       setStatuses(prev => ({ ...prev, npm: data.npm?.success ? "success" : "error" }))
       setMessages(prev => ({ ...prev, npm: data.npm?.version || "Not Found" }))
 
-      // Wallet Check
-      setActiveStep(2)
       await new Promise(r => setTimeout(r, 600))
-      const hasWallet = typeof window !== 'undefined' && (window as any).ethereum !== undefined;
+      const hasWallet = typeof window !== "undefined" && window.ethereum !== undefined;
       setStatuses(prev => ({ ...prev, wallet: hasWallet ? "success" : "error" }))
       setMessages(prev => ({ ...prev, wallet: hasWallet ? "Detected" : "MetaMask Not Installed" }))
 
-      // CLI Check
-      setActiveStep(3)
       await new Promise(r => setTimeout(r, 600))
       setStatuses(prev => ({ ...prev, cli: data.cli?.installed ? "success" : "error" }))
       setMessages(prev => ({ ...prev, cli: data.cli?.version || "Not Installed" }))
 
-      // MCP Check
-      setActiveStep(4)
       await new Promise(r => setTimeout(r, 600))
       setStatuses(prev => ({ ...prev, mcp: data.mcp?.reachable ? "success" : "error" }))
       setMessages(prev => ({ ...prev, mcp: data.mcp?.status || "Unreachable" }))
@@ -67,7 +62,6 @@ export function EnvironmentChecker() {
       setStatuses({ node: "error", npm: "error", cli: "error", mcp: "error", wallet: "error" })
     }
     
-    setActiveStep(steps.length)
     setIsChecking(false)
   }
 
@@ -84,7 +78,7 @@ export function EnvironmentChecker() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          {steps.map((step, index) => {
+          {steps.map((step) => {
             const status = statuses[step.id] || "pending"
             const msg = messages[step.id]
             const Icon = step.icon

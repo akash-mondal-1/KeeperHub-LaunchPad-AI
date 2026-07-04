@@ -10,6 +10,26 @@ import { Badge } from "@/components/ui/badge";
 import { createWalletClient, custom, parseEther, createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
+  isMetaMask?: boolean;
+}
+
+interface AuditData {
+  txHash: string;
+  status: string;
+  executionTimeMs: number;
+  estimatedGas: string;
+  retries: number;
+  routingPath: string[];
+}
+
+declare global {
+  interface Window {
+    ethereum?: EthereumProvider;
+  }
+}
+
 const workflowSteps = [
   { id: 1, title: "Initialize AI Agent", desc: "Start LangChain/OpenClaw Agent" },
   { id: 2, title: "Agent Decision", desc: "Agent decides to execute onchain" },
@@ -23,7 +43,7 @@ export default function WorkflowPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
-  const [auditData, setAuditData] = useState<any>(null);
+  const [auditData, setAuditData] = useState<AuditData | null>(null);
 
   const addLog = (msg: string, isError = false, isSuccess = false) => {
     const time = new Date().toLocaleTimeString();
@@ -36,7 +56,7 @@ export default function WorkflowPage() {
   const startSimulation = async () => {
     if (isRunning) return;
     
-    if (typeof window === 'undefined' || !(window as any).ethereum) {
+    if (typeof window === "undefined" || !window.ethereum) {
       alert("Please install MetaMask to execute real transactions.");
       return;
     }
@@ -56,7 +76,7 @@ export default function WorkflowPage() {
     try {
       const walletClient = createWalletClient({
         chain: sepolia,
-        transport: custom((window as any).ethereum)
+        transport: custom(window.ethereum)
       });
       
       const publicClient = createPublicClient({
@@ -66,57 +86,52 @@ export default function WorkflowPage() {
 
       const [account] = await walletClient.requestAddresses();
       
-      // Step 3: KeeperHub Prepare
       setActiveStep(3);
-      addLog(`[API] Sending intent to KeeperHub MCP (/api/keeperhub/execute)...`);
+      addLog("[API] Sending intent to KeeperHub MCP (/api/keeperhub/execute)...");
       
-      const prepareRes = await fetch('/api/keeperhub/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const prepareRes = await fetch("/api/keeperhub/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "prepare", account, to: account })
       });
-      const prepareData = await prepareRes.json();
+      const prepareData = await prepareRes.json() as { plan: { gasLimit: string; routing: string; to: string } };
       
       addLog(`[KeeperHub] Simulation SUCCESS. Gas Limit: ${prepareData.plan.gasLimit}`, false, true);
       addLog(`[KeeperHub] Routing allocated: ${prepareData.plan.routing}`);
 
-      // Step 4: Sign and Broadcast
       setActiveStep(4);
-      addLog(`[Client] Requesting wallet signature for transaction...`);
+      addLog("[Client] Requesting wallet signature for transaction...");
       
-      // We use MetaMask to broadcast, but architecturally we act as if the backend broadcasts.
-      // (MetaMask requires direct broadcast for safety).
       const hash = await walletClient.sendTransaction({
         account,
-        to: prepareData.plan.to,
-        value: parseEther('0.0001')
+        to: prepareData.plan.to as `0x${string}`,
+        value: parseEther("0.0001")
       });
       
       addLog(`[Client] Signed and broadcasted. Hash: ${hash}`);
       
-      // Step 5: KeeperHub Audit & Track
       setActiveStep(5);
-      addLog(`[KeeperHub] Tracking transaction via x402 mempool...`);
+      addLog("[KeeperHub] Tracking transaction via x402 mempool...");
       
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       addLog(`[KeeperHub] Transaction CONFIRMED in block ${receipt.blockNumber}!`, false, true);
       
-      // Step 6: Generate Audit Trail
       setActiveStep(6);
-      addLog(`[API] Fetching final KeeperHub Audit Trail...`);
+      addLog("[API] Fetching final KeeperHub Audit Trail...");
       
-      const auditRes = await fetch('/api/keeperhub/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const auditRes = await fetch("/api/keeperhub/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "audit", txHash: hash })
       });
-      const auditResult = await auditRes.json();
+      const auditResult = await auditRes.json() as { audit: AuditData };
       
       setAuditData(auditResult.audit);
       setActiveStep(7);
       
-    } catch (error: any) {
-      addLog(`[Error] ${error.message}`, true);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      addLog(`[Error] ${msg}`, true);
       setActiveStep(0);
     }
     
@@ -133,7 +148,7 @@ export default function WorkflowPage() {
             
             <div>
               <h1 className="text-3xl font-bold tracking-tight mb-2">KeeperHub Execution Workflow</h1>
-              <p className="text-muted-foreground">Visualize how your agent's decisions route securely through the KeeperHub MCP and Execution Layer.</p>
+              <p className="text-muted-foreground">Visualize how your agent&apos;s decisions route securely through the KeeperHub MCP and Execution Layer.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -150,15 +165,15 @@ export default function WorkflowPage() {
                       const isPast = activeStep > step.id;
                       
                       return (
-                        <div key={step.id} className={`flex items-start gap-4 transition-opacity duration-300 ${!isActive && !isPast && activeStep !== 0 ? 'opacity-40' : 'opacity-100'}`}>
+                        <div key={step.id} className={`flex items-start gap-4 transition-opacity duration-300 ${!isActive && !isPast && activeStep !== 0 ? "opacity-40" : "opacity-100"}`}>
                           <div className={`mt-1 h-6 w-6 rounded-full flex items-center justify-center text-xs font-medium border flex-shrink-0 ${
-                            isActive ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]' :
-                            isPast ? 'bg-green-500 text-white border-green-500' : 'bg-muted border-muted-foreground/30'
+                            isActive ? "bg-primary text-primary-foreground border-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" :
+                            isPast ? "bg-green-500 text-white border-green-500" : "bg-muted border-muted-foreground/30"
                           }`}>
                             {isActive ? <Loader2 className="h-3 w-3 animate-spin" /> : isPast ? <CheckCircle2 className="h-4 w-4" /> : step.id}
                           </div>
                           <div>
-                            <h4 className={`font-medium ${isActive ? 'text-primary' : ''}`}>{step.title}</h4>
+                            <h4 className={`font-medium ${isActive ? "text-primary" : ""}`}>{step.title}</h4>
                             <p className="text-xs text-muted-foreground">{step.desc}</p>
                           </div>
                         </div>

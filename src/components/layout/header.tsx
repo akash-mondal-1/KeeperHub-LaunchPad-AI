@@ -6,32 +6,33 @@ import { useState, useEffect } from "react";
 import { createWalletClient, custom } from "viem";
 import { sepolia } from "viem/chains";
 
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string }) => Promise<string[]>;
+      isMetaMask?: boolean;
+    };
+  }
+}
+
 export function Header() {
   const [address, setAddress] = useState<string | null>(null);
 
   useEffect(() => {
-    checkConnection();
+    if (typeof window === "undefined" || !window.ethereum) return;
+    window.ethereum.request({ method: "eth_accounts" })
+      .then(accounts => {
+        if (accounts && accounts.length > 0) setAddress(accounts[0]);
+      })
+      .catch(console.error);
   }, []);
 
-  const checkConnection = async () => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      try {
-        const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' });
-        if (accounts && accounts.length > 0) {
-          setAddress(accounts[0]);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  };
-
   const connectWallet = async () => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
+    if (typeof window !== "undefined" && window.ethereum) {
       try {
         const walletClient = createWalletClient({
           chain: sepolia,
-          transport: custom((window as any).ethereum)
+          transport: custom(window.ethereum)
         });
         const [account] = await walletClient.requestAddresses();
         setAddress(account);
@@ -46,9 +47,9 @@ export function Header() {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b px-6 bg-background/50 backdrop-blur-xl">
       <div className="flex items-center gap-2">
-        <div className={`h-2 w-2 rounded-full ${address ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse' : 'bg-red-500'}`} />
+        <div className={`h-2 w-2 rounded-full ${address ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" : "bg-red-500"}`} />
         <span className="text-sm font-medium text-muted-foreground">
-          {address ? 'Sepolia Connected' : 'Not Connected'}
+          {address ? "Sepolia Connected" : "Not Connected"}
         </span>
       </div>
       <div className="flex items-center gap-4">
